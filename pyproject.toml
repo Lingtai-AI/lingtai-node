@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "lingtai-node"
+version = "0.1.0"
+description = "LingTai Node MCP server — enables non-LingTai runtimes to participate in the LingTai agent network"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Zesen Huang", email = "hzsbazinga@outlook.com" }]
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Lingtai-AI/lingtai-node"
+Repository = "https://github.com/Lingtai-AI/lingtai-node"
+"LingTai" = "https://lingtai.ai"
+
+[project.scripts]
+lingtai-node = "lingtai_node.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lingtai_node"]
