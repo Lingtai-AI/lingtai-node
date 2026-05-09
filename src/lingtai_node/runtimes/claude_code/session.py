@@ -4,6 +4,11 @@ Every interaction resumes the same persistent session via ``--continue``.
 Claude Code stores sessions in its own session store; the ``--continue``
 flag resumes the most recent session in the current working directory.
 Prompts are executed via the ``claude`` CLI in non-interactive mode.
+
+The CLAUDE.md file in the agent directory is automatically loaded by
+Claude Code as its system prompt. This file contains the pre-compact
+ritual (what to save before context is shed) and the post-compact
+recovery instructions (what to read after compaction).
 """
 from __future__ import annotations
 
@@ -41,6 +46,10 @@ class ClaudeCodeSessionManager(SessionManager):
 
         First call: ``claude -p <prompt>`` (creates new session).
         Subsequent calls: ``claude -p <prompt> --continue`` (resumes).
+
+        Claude Code automatically loads CLAUDE.md from the working directory
+        as its system prompt. This file contains the pre-compact ritual and
+        character definition, so we don't need to pass it explicitly.
         """
         cmd = [
             "claude",

@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import shutil
 import tempfile
 import threading
 import time
@@ -26,6 +27,9 @@ log = logging.getLogger(__name__)
 PROMPT_FILENAME = ".prompt"
 RESPONSE_FILENAME = ".response"
 POLL_INTERVAL = 2  # seconds
+
+# Templates ship inside the lingtai-node package at templates/
+_TEMPLATES_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent / "templates"
 
 
 class Watcher:
@@ -55,6 +59,7 @@ class Watcher:
         """Start the heartbeat and the watcher thread."""
         if self._thread is not None:
             return
+        self._ensure_templates()
         self._heartbeat.start()
         self._stop_event.clear()
         self._thread = threading.Thread(
@@ -143,3 +148,14 @@ class Watcher:
                 os.unlink(tmp)
             raise
         log.info("Wrote .response (%d bytes)", len(result.get("stdout", "")))
+
+    def _ensure_templates(self) -> None:
+        """Copy CLAUDE.md and memory.md templates if they don't exist in the agent directory."""
+        for name in ("CLAUDE.md", "memory.md"):
+            dst = self._agent_dir / name
+            if dst.exists():
+                continue
+            src = _TEMPLATES_DIR / name
+            if src.is_file():
+                shutil.copy2(str(src), str(dst))
+                log.info("Copied template %s → %s", src, dst)

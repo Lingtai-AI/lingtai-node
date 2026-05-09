@@ -122,6 +122,9 @@ class AvatarManager:
         if our_covenant.is_file():
             shutil.copy2(str(our_covenant), str(node_dir / "covenant.md"))
 
+        # Copy runtime templates (CLAUDE.md, memory.md)
+        self._copy_runtime_templates(node_dir, runtime)
+
         # Write mission briefing to .prompt
         (node_dir / ".prompt").write_text(mission, encoding="utf-8")
 
@@ -209,3 +212,25 @@ class AvatarManager:
 
         log.info("Terminated node: %s", name)
         return {"status": "terminated", "name": name}
+
+    # ------------------------------------------------------------------
+    # Template management
+    # ------------------------------------------------------------------
+
+    # Templates ship inside the lingtai-node package at templates/
+    _TEMPLATES_DIR = Path(__file__).resolve().parent.parent.parent / "templates"
+
+    def _copy_runtime_templates(self, node_dir: Path, runtime: str) -> None:
+        """Copy runtime-specific templates (CLAUDE.md, memory.md) into the node directory."""
+        if runtime == "claude-code":
+            template_names = ("CLAUDE.md", "memory.md")
+        else:
+            # Other runtimes may have different templates; skip for now.
+            return
+
+        for name in template_names:
+            src = self._TEMPLATES_DIR / name
+            dst = node_dir / name
+            if src.is_file() and not dst.exists():
+                shutil.copy2(str(src), str(dst))
+                log.info("Copied template %s → %s", src, dst)

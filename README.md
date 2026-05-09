@@ -149,6 +149,8 @@ File mapping by runtime:
 agent_dir/
 ├── .agent.json              # Agent metadata
 ├── .heartbeat               # Heartbeat file (auto-updated)
+├── .prompt                  # Incoming task (consumed by watcher)
+├── .response                # Task output (written by watcher)
 ├── mailbox/
 │   ├── inbox/               # Incoming messages
 │   ├── sent/                # Sent messages
@@ -158,9 +160,30 @@ agent_dir/
 ├── codex/
 │   └── codex.json           # Knowledge entries
 ├── .library/                # Skill catalog
-├── CLAUDE.md                # Character file (claude-code runtime)
-└── memory.md                # Memory file (claude-code runtime)
+├── CLAUDE.md                # Character file (auto-generated from template)
+└── memory.md                # Memory file (auto-generated from template)
 ```
+
+## CLAUDE.md — The Pre-Compact Ritual
+
+When a node is spawned, `lingtai-node` automatically copies a `CLAUDE.md` template into the node directory. This file serves as the node's **character** — its identity across sessions.
+
+Claude Code loads `CLAUDE.md` from its working directory as part of its system prompt. The template defines:
+
+1. **Who the node is** — a LingTai network peer with email, codex, and library
+2. **Pre-compact ritual** — what to save before auto-compact sheds context (equivalent to LingTai's molt)
+3. **Post-compact recovery** — what to read after compaction to reconstruct context
+4. **Behavior guidelines** — proactive email checking, honest escalation, thorough reporting
+
+The mapping between LingTai and Claude Code concepts:
+
+| LingTai | Claude Code | File |
+|---------|-------------|------|
+| Character (灵台) | System prompt | `CLAUDE.md` |
+| Working memory (心台) | Project knowledge | `memory.md` |
+| Knowledge (典藏) | MCP tool | `codex/` |
+| Skills (技能) | MCP tool | `library/` |
+| Communication (传书) | MCP tool | `mailbox/` |
 
 ## License
 
