@@ -21,6 +21,7 @@ CONTRACT_PATH = Path(__file__).parent / "NODE_CONTRACT.md"
 # Runtime → (character_filename, memory_filename, long_term_memory_dir)
 RUNTIME_FILE_MAP: dict[str, tuple[str, str, str]] = {
     "claude-code": ("CLAUDE.md", "memory.md", "codex"),
+    "openai-codex": ("AGENTS.md", "memory.md", "codex"),
     "lingtai": ("lingtai.md", "pad.md", "codex"),
 }
 
