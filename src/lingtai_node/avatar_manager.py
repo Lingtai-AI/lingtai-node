@@ -14,6 +14,7 @@ import logging
 import os
 import shutil
 import tempfile
+import importlib.resources
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -220,9 +221,6 @@ class AvatarManager:
     # Template management
     # ------------------------------------------------------------------
 
-    # Templates ship inside the lingtai-node package at templates/
-    _TEMPLATES_DIR = Path(__file__).resolve().parent.parent.parent / "templates"
-
     def _copy_runtime_templates(self, node_dir: Path, runtime: str) -> None:
         """Copy runtime-specific templates (CLAUDE.md, memory.md) into the node directory."""
         if runtime == "claude-code":
@@ -232,8 +230,15 @@ class AvatarManager:
             return
 
         for name in template_names:
-            src = self._TEMPLATES_DIR / name
             dst = node_dir / name
-            if src.is_file() and not dst.exists():
-                shutil.copy2(str(src), str(dst))
-                log.info("Copied template %s → %s", src, dst)
+            if dst.exists():
+                continue
+            
+            # Use importlib.resources to load templates from the package
+            try:
+                template_ref = importlib.resources.files("lingtai_node.templates").joinpath(name)
+                with importlib.resources.as_file(template_ref) as template_path:
+                    shutil.copy2(str(template_path), str(dst))
+                    log.info("Copied template %s → %s", template_path, dst)
+            except (FileNotFoundError, TypeError) as e:
+                log.warning("Template %s not found in package: %s", name, e)

@@ -9,6 +9,7 @@ The watcher is a lightweight daemon that:
 """
 from __future__ import annotations
 
+import importlib.resources
 import json
 import logging
 import os
@@ -27,9 +28,6 @@ log = logging.getLogger(__name__)
 PROMPT_FILENAME = ".prompt"
 RESPONSE_FILENAME = ".response"
 POLL_INTERVAL = 2  # seconds
-
-# Templates ship inside the lingtai-node package at templates/
-_TEMPLATES_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent / "templates"
 
 
 class Watcher:
@@ -155,7 +153,12 @@ class Watcher:
             dst = self._agent_dir / name
             if dst.exists():
                 continue
-            src = _TEMPLATES_DIR / name
-            if src.is_file():
-                shutil.copy2(str(src), str(dst))
-                log.info("Copied template %s → %s", src, dst)
+            
+            # Use importlib.resources to load templates from the package
+            try:
+                template_ref = importlib.resources.files("lingtai_node.templates").joinpath(name)
+                with importlib.resources.as_file(template_ref) as template_path:
+                    shutil.copy2(str(template_path), str(dst))
+                    log.info("Copied template %s → %s", template_path, dst)
+            except (FileNotFoundError, TypeError) as e:
+                log.warning("Template %s not found in package: %s", name, e)
