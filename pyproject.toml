@@ -21,6 +21,7 @@ Repository = "https://github.com/Lingtai-AI/lingtai-node"
 
 [project.scripts]
 lingtai-node = "lingtai_node.__main__:main"
+lingtai-watch = "scripts.watch:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/lingtai_node"]
