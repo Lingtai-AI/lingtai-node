@@ -1,0 +1,87 @@
+"""LingTai Node Contract — the abstract interface for all node runtimes.
+
+This module provides:
+- NODE_CONTRACT_VERSION: the current contract version
+- validate_node(): check if a node directory satisfies the contract
+- CONTRACT_PATH: path to the formal specification document
+"""
+from __future__ import annotations
+
+import json
+import logging
+from pathlib import Path
+from typing import Any
+
+log = logging.getLogger(__name__)
+
+NODE_CONTRACT_VERSION = "1.0.0"
+
+CONTRACT_PATH = Path(__file__).parent / "NODE_CONTRACT.md"
+
+# Runtime → (character_filename, memory_filename)
+RUNTIME_FILE_MAP: dict[str, tuple[str, str]] = {
+    "claude-code": ("CLAUDE.md", "memory.md"),
+    "lingtai": ("lingtai.md", "pad.md"),
+}
+
+
+def validate_node(node_dir: Path, *, runtime: str = "claude-code") -> dict[str, Any]:
+    """Validate that a node directory satisfies the contract.
+
+    Returns a dict with:
+    - valid: bool
+    - errors: list of missing/invalid items
+    - warnings: list of non-critical issues
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    node_dir = Path(node_dir)
+    if not node_dir.is_dir():
+        return {"valid": False, "errors": [f"Node directory does not exist: {node_dir}"], "warnings": []}
+
+    # 1. Required metadata
+    agent_json = node_dir / ".agent.json"
+    if not agent_json.is_file():
+        errors.append("Missing .agent.json")
+    else:
+        try:
+            meta = json.loads(agent_json.read_text(encoding="utf-8"))
+            if "name" not in meta:
+                warnings.append(".agent.json missing 'name' field")
+            if "runtime" not in meta:
+                warnings.append(".agent.json missing 'runtime' field")
+        except (json.JSONDecodeError, OSError) as e:
+            errors.append(f".agent.json is invalid: {e}")
+
+    # 2. Character and memory files (runtime-specific)
+    char_file, mem_file = RUNTIME_FILE_MAP.get(runtime, (None, None))
+    if char_file:
+        if not (node_dir / char_file).is_file():
+            errors.append(f"Missing character file: {char_file}")
+    else:
+        warnings.append(f"Unknown runtime '{runtime}' — cannot check character file")
+
+    if mem_file:
+        if not (node_dir / mem_file).is_file():
+            warnings.append(f"Missing memory file: {mem_file}")
+
+    # 3. Mailbox structure
+    mailbox = node_dir / "mailbox"
+    if not mailbox.is_dir():
+        errors.append("Missing mailbox/ directory")
+    else:
+        for sub in ("inbox", "sent", "archive"):
+            if not (mailbox / sub).is_dir():
+                errors.append(f"Missing mailbox/{sub}/ directory")
+
+    # 4. Codex
+    codex_dir = node_dir / "codex"
+    if not codex_dir.is_dir():
+        warnings.append("Missing codex/ directory (will be created on first use)")
+
+    return {
+        "valid": len(errors) == 0,
+        "errors": errors,
+        "warnings": warnings,
+    }

@@ -18,6 +18,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from lingtai_node.contracts import NODE_CONTRACT_VERSION
+
 log = logging.getLogger(__name__)
 
 SCHEMA = {
@@ -109,6 +111,7 @@ class AvatarManager:
         agent_meta = {
             "name": name,
             "runtime": runtime,
+            "contract_version": NODE_CONTRACT_VERSION,
             "spawned_by": self._agent_dir.name,
             "spawned_at": now,
         }

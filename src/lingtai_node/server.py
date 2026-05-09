@@ -50,6 +50,7 @@ from .email_manager import EmailManager
 from .email_manager import SCHEMA as EMAIL_SCHEMA
 from .email_manager import DESCRIPTION as EMAIL_DESCRIPTION
 from .heartbeat import HeartbeatManager
+from .contracts import NODE_CONTRACT_VERSION, validate_node
 from .library_manager import LibraryManager
 from .library_manager import SCHEMA as LIBRARY_SCHEMA
 from .library_manager import DESCRIPTION as LIBRARY_DESCRIPTION
@@ -63,12 +64,39 @@ from .system_manager import DESCRIPTION as SYSTEM_DESCRIPTION
 log = logging.getLogger("lingtai_node")
 
 
+CONTRACT_DESCRIPTION = (
+    "LingTai Node Contract — the abstract interface that all node runtimes "
+    "implement. Use 'read' to see the full contract specification. "
+    "Use 'validate' to check if a node directory satisfies the contract."
+)
+
+CONTRACT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "action": {
+            "type": "string",
+            "enum": ["read", "validate"],
+            "description": (
+                "read: return the full contract specification. "
+                "validate: check a node directory against the contract."
+            ),
+        },
+        "node_dir": {
+            "type": "string",
+            "description": "Node directory to validate (for 'validate' action). Defaults to this node's directory.",
+        },
+    },
+    "required": ["action"],
+}
+
+
 _SERVER_INSTRUCTIONS = (
     "lingtai-node: LingTai agent network node for non-LingTai runtimes. "
     "Provides mailbox communication (email tool), knowledge store (codex tool), "
     "skill catalog (library tool), node status (node_info tool), "
     "character/memory file mapping (mapping tool), node spawning (avatar tool), "
-    "network contract (covenant tool), and inter-node control (system tool). "
+    "network contract (covenant tool), inter-node control (system tool), "
+    "and node contract specification (contract tool). "
     "Configure via the LINGTAI_NODE_CONFIG env var pointing at a JSON file."
 )
 
@@ -128,13 +156,18 @@ def _build_node_info(
 
     hb = heartbeat.read()
 
+    # Validate contract compliance
+    validation = validate_node(agent_dir, runtime=runtime)
+
     return {
         "status": "ok",
         "agent_name": agent_name,
         "agent_dir": str(agent_dir),
         "runtime": runtime,
+        "contract_version": NODE_CONTRACT_VERSION,
         "heartbeat": hb,
         "agent_metadata": agent_meta,
+        "contract_validation": validation,
     }
 
 
@@ -204,6 +237,11 @@ def build_server(
                 description=SYSTEM_DESCRIPTION,
                 inputSchema=SYSTEM_SCHEMA,
             ),
+            types.Tool(
+                name="contract",
+                description=CONTRACT_DESCRIPTION,
+                inputSchema=CONTRACT_SCHEMA,
+            ),
         ]
 
     @server.call_tool()
@@ -268,6 +306,32 @@ def build_server(
                 result = _error("System manager not initialized")
             else:
                 result = await asyncio.to_thread(system.handle, arguments)
+
+        elif name == "contract":
+            action = arguments.get("action", "read")
+            if action == "read":
+                try:
+                    content = Path(
+                        __file__
+                    ).resolve().parent / "contracts" / "NODE_CONTRACT.md"
+                    result = {
+                        "status": "ok",
+                        "contract_version": NODE_CONTRACT_VERSION,
+                        "content": content.read_text(encoding="utf-8"),
+                    }
+                except Exception as e:
+                    result = _error(f"Failed to read contract: {e}")
+            elif action == "validate":
+                node_dir = arguments.get("node_dir")
+                if not node_dir and agent_dir:
+                    node_dir = str(agent_dir)
+                if not node_dir:
+                    result = _error("node_dir required for validate")
+                else:
+                    result = validate_node(Path(node_dir), runtime=runtime)
+                    result["status"] = "ok"
+            else:
+                result = _error(f"Unknown contract action: {action}")
 
         else:
             result = {"error": f"Unknown tool: {name!r}"}
