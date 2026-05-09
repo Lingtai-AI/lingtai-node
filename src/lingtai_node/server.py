@@ -1,8 +1,9 @@
 """LingTai Node MCP server.
 
 Enables non-LingTai runtimes to participate in the LingTai agent network
-by exposing email, codex, library, node_info, and mapping tools over
-MCP/stdio. Maintains a heartbeat file to prove liveness.
+by exposing email, codex, library, node_info, mapping, avatar, covenant,
+and system tools over MCP/stdio. Maintains a heartbeat file to prove
+liveness.
 
 Configuration:
     LINGTAI_NODE_CONFIG — path to a JSON config file (required).
@@ -36,9 +37,15 @@ import mcp.types as types
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 
+from .avatar_manager import AvatarManager
+from .avatar_manager import SCHEMA as AVATAR_SCHEMA
+from .avatar_manager import DESCRIPTION as AVATAR_DESCRIPTION
 from .codex_manager import CodexManager
 from .codex_manager import SCHEMA as CODEX_SCHEMA
 from .codex_manager import DESCRIPTION as CODEX_DESCRIPTION
+from .covenant_manager import CovenantManager
+from .covenant_manager import SCHEMA as COVENANT_SCHEMA
+from .covenant_manager import DESCRIPTION as COVENANT_DESCRIPTION
 from .email_manager import EmailManager
 from .email_manager import SCHEMA as EMAIL_SCHEMA
 from .email_manager import DESCRIPTION as EMAIL_DESCRIPTION
@@ -49,6 +56,9 @@ from .library_manager import DESCRIPTION as LIBRARY_DESCRIPTION
 from .mapping import MappingManager
 from .mapping import SCHEMA as MAPPING_SCHEMA
 from .mapping import DESCRIPTION as MAPPING_DESCRIPTION
+from .system_manager import SystemManager
+from .system_manager import SCHEMA as SYSTEM_SCHEMA
+from .system_manager import DESCRIPTION as SYSTEM_DESCRIPTION
 
 log = logging.getLogger("lingtai_node")
 
@@ -56,8 +66,9 @@ log = logging.getLogger("lingtai_node")
 _SERVER_INSTRUCTIONS = (
     "lingtai-node: LingTai agent network node for non-LingTai runtimes. "
     "Provides mailbox communication (email tool), knowledge store (codex tool), "
-    "skill catalog (library tool), node status (node_info tool), and "
-    "character/memory file mapping (mapping tool). "
+    "skill catalog (library tool), node status (node_info tool), "
+    "character/memory file mapping (mapping tool), node spawning (avatar tool), "
+    "network contract (covenant tool), and inter-node control (system tool). "
     "Configure via the LINGTAI_NODE_CONFIG env var pointing at a JSON file."
 )
 
@@ -136,6 +147,9 @@ def build_server(
     codex: CodexManager | None,
     library: LibraryManager | None,
     mapping: MappingManager | None,
+    avatar: AvatarManager | None,
+    covenant: CovenantManager | None,
+    system: SystemManager | None,
     heartbeat: HeartbeatManager | None,
     agent_dir: Path | None,
     runtime: str = "claude-code",
@@ -174,6 +188,21 @@ def build_server(
                 name="mapping",
                 description=MAPPING_DESCRIPTION,
                 inputSchema=MAPPING_SCHEMA,
+            ),
+            types.Tool(
+                name="avatar",
+                description=AVATAR_DESCRIPTION,
+                inputSchema=AVATAR_SCHEMA,
+            ),
+            types.Tool(
+                name="covenant",
+                description=COVENANT_DESCRIPTION,
+                inputSchema=COVENANT_SCHEMA,
+            ),
+            types.Tool(
+                name="system",
+                description=SYSTEM_DESCRIPTION,
+                inputSchema=SYSTEM_SCHEMA,
             ),
         ]
 
@@ -222,6 +251,24 @@ def build_server(
             else:
                 result = await asyncio.to_thread(mapping.handle, arguments)
 
+        elif name == "avatar":
+            if avatar is None:
+                result = _error("Avatar manager not initialized")
+            else:
+                result = await asyncio.to_thread(avatar.handle, arguments)
+
+        elif name == "covenant":
+            if covenant is None:
+                result = _error("Covenant manager not initialized")
+            else:
+                result = await asyncio.to_thread(covenant.handle, arguments)
+
+        elif name == "system":
+            if system is None:
+                result = _error("System manager not initialized")
+            else:
+                result = await asyncio.to_thread(system.handle, arguments)
+
         else:
             result = {"error": f"Unknown tool: {name!r}"}
 
@@ -249,6 +296,9 @@ async def serve() -> None:
     codex: CodexManager | None = None
     library: LibraryManager | None = None
     mapping_mgr: MappingManager | None = None
+    avatar: AvatarManager | None = None
+    covenant: CovenantManager | None = None
+    system: SystemManager | None = None
     heartbeat: HeartbeatManager | None = None
     agent_dir: Path | None = None
     runtime = "claude-code"
@@ -265,6 +315,9 @@ async def serve() -> None:
         codex = CodexManager(agent_dir)
         library = LibraryManager(agent_dir)
         mapping_mgr = MappingManager(agent_dir, runtime=runtime)
+        avatar = AvatarManager(agent_dir)
+        covenant = CovenantManager(agent_dir, agent_name=agent_name)
+        system = SystemManager(agent_dir, agent_name=agent_name)
         heartbeat = HeartbeatManager(agent_dir, runtime=runtime)
         heartbeat.start()
         log.info(
@@ -281,6 +334,9 @@ async def serve() -> None:
         codex=codex,
         library=library,
         mapping=mapping_mgr,
+        avatar=avatar,
+        covenant=covenant,
+        system=system,
         heartbeat=heartbeat,
         agent_dir=agent_dir,
         runtime=runtime,
