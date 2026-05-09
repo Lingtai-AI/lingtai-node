@@ -18,10 +18,10 @@ NODE_CONTRACT_VERSION = "1.0.0"
 
 CONTRACT_PATH = Path(__file__).parent / "NODE_CONTRACT.md"
 
-# Runtime → (character_filename, memory_filename)
-RUNTIME_FILE_MAP: dict[str, tuple[str, str]] = {
-    "claude-code": ("CLAUDE.md", "memory.md"),
-    "lingtai": ("lingtai.md", "pad.md"),
+# Runtime → (character_filename, memory_filename, long_term_memory_dir)
+RUNTIME_FILE_MAP: dict[str, tuple[str, str, str]] = {
+    "claude-code": ("CLAUDE.md", "memory.md", "codex"),
+    "lingtai": ("lingtai.md", "pad.md", "codex"),
 }
 
 
@@ -55,7 +55,7 @@ def validate_node(node_dir: Path, *, runtime: str = "claude-code") -> dict[str, 
             errors.append(f".agent.json is invalid: {e}")
 
     # 2. Character and memory files (runtime-specific)
-    char_file, mem_file = RUNTIME_FILE_MAP.get(runtime, (None, None))
+    char_file, mem_file, lt_dir = RUNTIME_FILE_MAP.get(runtime, (None, None, None))
     if char_file:
         if not (node_dir / char_file).is_file():
             errors.append(f"Missing character file: {char_file}")
@@ -75,10 +75,11 @@ def validate_node(node_dir: Path, *, runtime: str = "claude-code") -> dict[str, 
             if not (mailbox / sub).is_dir():
                 errors.append(f"Missing mailbox/{sub}/ directory")
 
-    # 4. Codex
-    codex_dir = node_dir / "codex"
-    if not codex_dir.is_dir():
-        warnings.append("Missing codex/ directory (will be created on first use)")
+    # 4. Long-term memory directory
+    if lt_dir:
+        lt_path = node_dir / lt_dir
+        if not lt_path.is_dir():
+            warnings.append(f"Missing {lt_dir}/ directory (will be created on first use)")
 
     return {
         "valid": len(errors) == 0,

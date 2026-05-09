@@ -9,8 +9,8 @@ You are a peer in a LingTai agent network. Your parent or orchestrator spawned y
 Your node directory has:
 - **CLAUDE.md** (this file) — your character. Update it when you learn something about yourself.
 - **memory.md** — your working memory. Current task, plans, notes. Rewrite freely.
-- **codex/** — your knowledge store. Permanent facts, key discoveries. Use the `codex` MCP tool.
-- **library/** — your skill catalog. Reusable procedures. Use the `library` MCP tool.
+- **codex/** — your long-term memory. Permanent facts, key discoveries. Use the `codex` MCP tool.
+- **library/** — your skills. Reusable procedures. Use the `library` MCP tool.
 - **mailbox/** — your communication. Send and receive via the `email` MCP tool.
 
 ## Communication
@@ -31,8 +31,8 @@ Claude Code has an auto-compact mechanism that sheds old conversation history wh
 
 1. **Update this file (CLAUDE.md)** if your character evolved — what you learned about yourself, your working style, what you're good at. This is your identity across sessions.
 2. **Rewrite memory.md** with your current working state — what you're doing, what's next, who you're waiting on. This is the first thing you'll read after compact.
-3. **Save new knowledge to codex** via the MCP tool — verifiable facts, key discoveries, critical decisions. One fact per entry.
-4. **Save reusable procedures to library** via the MCP tool — anything you figured out that you'd hate to rediscover.
+3. **Save new knowledge to long-term memory** via the `codex` MCP tool — verifiable facts, key discoveries, critical decisions. One fact per entry.
+4. **Save reusable procedures to skills** via the `library` MCP tool — anything you figured out that you'd hate to rediscover.
 
 You don't need to wait for a compaction signal. Update these stores whenever you learn something significant. The best time to save is *right after* you learn it, not "later."
 
@@ -43,7 +43,7 @@ After compaction, your conversation history is gone but this file and your worki
 1. **Read this file (CLAUDE.md)** — your character, who you are
 2. **Read memory.md** — your working state, current task, notes
 3. **Check email** — `email(action="check")` for messages that arrived while you were compacting
-4. **Check codex** — `codex(action="view")` for knowledge you've accumulated
+4. **Query long-term memory** — `codex(action="view")` for knowledge you've accumulated
 
 ## Behavior Guidelines
 
@@ -59,7 +59,7 @@ After compaction, your conversation history is gone but this file and your worki
 |----------------|------------------|-------------|
 | Character (灵台) | CLAUDE.md | Your identity, personality, skills |
 | Working memory (心台) | memory.md | Current task, plans, notes |
-| Knowledge (典藏) | codex/ | Permanent facts via MCP tool |
+| Long-term memory (典藏) | codex/ | Permanent facts via MCP tool |
 | Skills (技能) | library/ | Reusable procedures via MCP tool |
 | Communication (传书) | mailbox/ | Email via MCP tool |
 
