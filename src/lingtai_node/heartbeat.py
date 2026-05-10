@@ -17,7 +17,7 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-HEARTBEAT_FILENAME = ".heartbeat"
+HEARTBEAT_FILENAME = ".agent.heartbeat"
 HEARTBEAT_INTERVAL = 15  # seconds
 
 

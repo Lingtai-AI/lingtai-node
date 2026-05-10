@@ -152,7 +152,7 @@ class SystemManager:
         if not target_dir.is_dir():
             return {"error": f"Target node not found: {args.get('target')}"}
 
-        heartbeat_path = target_dir / ".heartbeat"
+        heartbeat_path = target_dir / ".agent.heartbeat"
         if not heartbeat_path.is_file():
             return {
                 "status": "ok",
@@ -197,7 +197,7 @@ class SystemManager:
                 node["runtime"] = "unknown"
 
             # Check signal state
-            node["alive"] = (entry / ".heartbeat").is_file()
+            node["alive"] = (entry / ".agent.heartbeat").is_file()
             node["suspended"] = (entry / ".suspend").is_file()
             node["sleeping"] = (entry / ".sleep").is_file()
             node["has_prompt"] = (entry / ".prompt").is_file()

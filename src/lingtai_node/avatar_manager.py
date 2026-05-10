@@ -164,7 +164,7 @@ class AvatarManager:
                 node["runtime"] = "unknown"
 
             # Read heartbeat
-            heartbeat_path = entry / ".heartbeat"
+            heartbeat_path = entry / ".agent.heartbeat"
             if heartbeat_path.is_file():
                 try:
                     hb = json.loads(heartbeat_path.read_text(encoding="utf-8"))
