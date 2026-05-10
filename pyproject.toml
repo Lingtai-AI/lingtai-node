@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "lingtai-node"
-version = "0.1.0"
-description = "LingTai Node MCP server — enables non-LingTai runtimes to participate in the LingTai agent network"
+version = "0.2.0"
+description = "LingTai Node — harness-agnostic MCP server for AI agent networks. Implements the Node Contract (6 artifacts, 2 lifecycle hooks) so any runtime can participate."
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "Zesen Huang", email = "hzsbazinga@outlook.com" }]
@@ -13,6 +13,19 @@ requires-python = ">=3.10"
 dependencies = [
     "mcp>=1.0.0",
 ]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+keywords = ["agent", "mcp", "lingtai", "ai", "llm", "multi-agent"]
 
 [project.urls]
 Homepage = "https://github.com/Lingtai-AI/lingtai-node"
@@ -25,3 +38,19 @@ lingtai-watch = "lingtai_node.watch:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/lingtai_node"]
+
+[tool.hatch.build.targets.wheel.shared-data]
+"templates" = "lingtai_node/templates"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/",
+    "templates/",
+    "tests/",
+    "README.md",
+    "LICENSE",
+    "pyproject.toml",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
