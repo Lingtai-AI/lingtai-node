@@ -14,15 +14,16 @@ from typing import Any
 
 log = logging.getLogger(__name__)
 
-NODE_CONTRACT_VERSION = "1.0.0"
+NODE_CONTRACT_VERSION = "2.0.0"
 
 CONTRACT_PATH = Path(__file__).parent / "NODE_CONTRACT.md"
 
-# Runtime → (character_filename, memory_filename, long_term_memory_dir)
-RUNTIME_FILE_MAP: dict[str, tuple[str, str, str]] = {
-    "claude-code": ("CLAUDE.md", "memory.md", "codex"),
-    "openai-codex": ("AGENTS.md", "memory.md", "codex"),
-    "lingtai": ("lingtai.md", "pad.md", "codex"),
+# Runtime → (character_filename, memory_filename, long_term_memory_dir, handover_filename)
+RUNTIME_FILE_MAP: dict[str, tuple[str, str, str, str]] = {
+    "claude-code": ("CLAUDE.md", "memory.md", "codex", "handover.md"),
+    "openai-codex": ("AGENTS.md", "memory.md", "codex", "handover.md"),
+    "lingtai": ("lingtai.md", "pad.md", "codex", "handover.md"),
+    "hermes": ("identity.md", "goals.md", "memory", "handover.md"),
 }
 
 
@@ -55,8 +56,8 @@ def validate_node(node_dir: Path, *, runtime: str = "claude-code") -> dict[str, 
         except (json.JSONDecodeError, OSError) as e:
             errors.append(f".agent.json is invalid: {e}")
 
-    # 2. Character and memory files (runtime-specific)
-    char_file, mem_file, lt_dir = RUNTIME_FILE_MAP.get(runtime, (None, None, None))
+    # 2. Character, memory, and handover files (runtime-specific)
+    char_file, mem_file, lt_dir, handover_file = RUNTIME_FILE_MAP.get(runtime, (None, None, None, None))
     if char_file:
         if not (node_dir / char_file).is_file():
             errors.append(f"Missing character file: {char_file}")
@@ -76,7 +77,12 @@ def validate_node(node_dir: Path, *, runtime: str = "claude-code") -> dict[str, 
             if not (mailbox / sub).is_dir():
                 errors.append(f"Missing mailbox/{sub}/ directory")
 
-    # 4. Long-term memory directory
+    # 4. Handover file (optional — written before compact/molt, may not exist yet)
+    if handover_file:
+        if not (node_dir / handover_file).is_file():
+            warnings.append(f"Missing {handover_file} (will be created on first compact/molt)")
+
+    # 5. Long-term memory directory
     if lt_dir:
         lt_path = node_dir / lt_dir
         if not lt_path.is_dir():
