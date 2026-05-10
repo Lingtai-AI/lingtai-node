@@ -22,7 +22,7 @@ CONTRACT_PATH = Path(__file__).parent / "NODE_CONTRACT.md"
 RUNTIME_FILE_MAP: dict[str, tuple[str, str, str, str]] = {
     "claude-code": ("CLAUDE.md", "memory.md", "codex", "handover.md"),
     "openai-codex": ("AGENTS.md", "memory.md", "codex", "handover.md"),
-    "lingtai": ("lingtai.md", "pad.md", "codex", "handover.md"),
+    "lingtai": ("lingtai.md", "pad.md", "codex", "system/summaries"),
     "hermes": ("identity.md", "goals.md", "memory", "handover.md"),
 }
 
@@ -77,9 +77,10 @@ def validate_node(node_dir: Path, *, runtime: str = "claude-code") -> dict[str, 
             if not (mailbox / sub).is_dir():
                 errors.append(f"Missing mailbox/{sub}/ directory")
 
-    # 4. Handover file (optional — written before compact/molt, may not exist yet)
+    # 4. Handover path (optional — may be a file or directory depending on runtime)
     if handover_file:
-        if not (node_dir / handover_file).is_file():
+        handover_path = node_dir / handover_file
+        if not (handover_path.is_file() or handover_path.is_dir()):
             warnings.append(f"Missing {handover_file} (will be created on first compact/molt)")
 
     # 5. Long-term memory directory
@@ -93,3 +94,8 @@ def validate_node(node_dir: Path, *, runtime: str = "claude-code") -> dict[str, 
         "errors": errors,
         "warnings": warnings,
     }
+
+
+def runtime_exists(runtime_name: str) -> bool:
+    """Return True if *runtime_name* is a known runtime in the file map."""
+    return runtime_name in RUNTIME_FILE_MAP

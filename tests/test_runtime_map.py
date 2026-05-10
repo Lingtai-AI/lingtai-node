@@ -61,11 +61,21 @@ def test_memory_file_has_md_extension(runtime: str):
     assert mem_file.endswith(".md"), f"{runtime}: memory file '{mem_file}' is not .md"
 
 
-@pytest.mark.parametrize("runtime", EXPECTED_RUNTIMES)
-def test_handover_file_has_md_extension(runtime: str):
-    """Handover file must end in .md."""
-    handover_file = RUNTIME_FILE_MAP[runtime][3]
-    assert handover_file.endswith(".md"), f"{runtime}: handover file '{handover_file}' is not .md"
+_FILE_HANDOVER_RUNTIMES = {"claude-code", "openai-codex", "hermes"}
+
+
+@pytest.mark.parametrize("runtime", _FILE_HANDOVER_RUNTIMES)
+def test_file_handover_has_md_extension(runtime: str):
+    """Runtimes that use a handover *file* must end in .md."""
+    handover = RUNTIME_FILE_MAP[runtime][3]
+    assert handover.endswith(".md"), f"{runtime}: handover '{handover}' is not .md"
+
+
+def test_lingtai_handover_is_directory_path():
+    """LingTai uses a handover *directory* (system/summaries), not a file."""
+    handover = RUNTIME_FILE_MAP["lingtai"][3]
+    assert not handover.endswith(".md")
+    assert "/" in handover  # nested directory path
 
 
 @pytest.mark.parametrize("runtime", EXPECTED_RUNTIMES)
@@ -98,12 +108,12 @@ def test_openai_codex_mapping():
 
 
 def test_lingtai_mapping():
-    """LingTai uses lingtai.md, pad.md, codex, handover.md."""
+    """LingTai uses lingtai.md, pad.md, codex, system/summaries."""
     char, mem, knowledge, handover = RUNTIME_FILE_MAP["lingtai"]
     assert char == "lingtai.md"
     assert mem == "pad.md"
     assert knowledge == "codex"
-    assert handover == "handover.md"
+    assert handover == "system/summaries"
 
 
 def test_hermes_mapping():

@@ -46,10 +46,16 @@ def _make_node_dir(node_dir: Path, runtime: str = "claude-code") -> Path:
     )
 
     # Runtime-specific files
-    char_file, mem_file, lt_dir, handover_file = RUNTIME_FILE_MAP[runtime]
+    char_file, mem_file, lt_dir, handover_path = RUNTIME_FILE_MAP[runtime]
     (node_dir / char_file).write_text(f"# Identity for {runtime}", encoding="utf-8")
     (node_dir / mem_file).write_text(f"# Memory for {runtime}", encoding="utf-8")
-    (node_dir / handover_file).write_text("# Handover", encoding="utf-8")
+
+    # Handover: may be a file (handover.md) or a directory (system/summaries)
+    hp = node_dir / handover_path
+    if handover_path.endswith(".md"):
+        hp.write_text("# Handover", encoding="utf-8")
+    else:
+        hp.mkdir(parents=True, exist_ok=True)
 
     # Mailbox
     (node_dir / "mailbox" / "inbox").mkdir(parents=True)
