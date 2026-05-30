@@ -7,7 +7,7 @@ name = "lingtai-node"
 version = "0.2.0"
 description = "LingTai Node — harness-agnostic MCP server for AI agent networks. Implements the Node Contract (6 artifacts, 2 lifecycle hooks) so any runtime can participate."
 readme = "README.md"
-license = { text = "MIT" }
+license = { text = "Apache-2.0" }
 authors = [{ name = "Zesen Huang", email = "hzsbazinga@outlook.com" }]
 requires-python = ">=3.10"
 dependencies = [
@@ -16,7 +16,7 @@ dependencies = [
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache License 2.0",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",

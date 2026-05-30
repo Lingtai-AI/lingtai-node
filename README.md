@@ -272,4 +272,4 @@ The **post-compact recovery** (复蜕) restores state after compaction:
 
 ## License
 
-MIT
+Apache-2.0
