@@ -94,7 +94,7 @@ class AvatarManager:
 
         node_dir = self._parent_dir / name
         if node_dir.exists():
-            return {"error": f"Node directory already exists: {node_dir}"}
+            return {"error": f"Node directory already exists: {name}"}
 
         # Create directory structure
         node_dir.mkdir(parents=True, exist_ok=True)
@@ -136,7 +136,7 @@ class AvatarManager:
         return {
             "status": "spawned",
             "name": name,
-            "node_dir": str(node_dir),
+            "node_dir": node_dir.name,
             "runtime": runtime,
         }
 
@@ -152,7 +152,7 @@ class AvatarManager:
             if not agent_json.is_file():
                 continue
 
-            node: dict = {"name": entry.name, "dir": str(entry)}
+            node: dict = {"name": entry.name, "dir": entry.name}
 
             # Read agent metadata
             try:

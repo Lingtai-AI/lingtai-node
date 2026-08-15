@@ -187,7 +187,7 @@ class SystemManager:
             if not agent_json.is_file():
                 continue
 
-            node: dict = {"name": entry.name, "dir": str(entry)}
+            node: dict = {"name": entry.name, "dir": entry.name}
 
             # Read agent metadata
             try:

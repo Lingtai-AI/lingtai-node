@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import hashlib
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -78,7 +79,9 @@ class CovenantManager:
         ack = {
             "agent_name": self._agent_name,
             "acknowledged_at": now,
-            "covenant_hash": hex(hash(COVENANT_TEXT)),
+            "covenant_hash": hashlib.sha256(
+                COVENANT_TEXT.encode("utf-8"),
+            ).hexdigest(),
         }
 
         self._agent_dir.mkdir(parents=True, exist_ok=True)
