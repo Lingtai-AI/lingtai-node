@@ -14,7 +14,8 @@ from __future__ import annotations
 import json
 import logging
 import os
-import re
+import hmac
+import hashlib
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,6 +23,14 @@ from typing import Any
 from uuid import uuid4
 
 log = logging.getLogger(__name__)
+
+MAX_SEARCH_PATTERN_LENGTH = 256
+MAIL_AUTH_SECRET_ENV = "LINGTAI_MAIL_AUTH_SECRET"
+MAIL_SIGNATURE_VERSION = "v1"
+_SIGNED_EMAIL_FIELDS = (
+    "id", "from", "to", "subject", "body", "date",
+    "in_reply_to", "thread_id", "status",
+)
 
 SCHEMA = {
     "type": "object",
@@ -70,7 +79,7 @@ SCHEMA = {
         },
         "query": {
             "type": "string",
-            "description": "Search query (regex pattern)",
+            "description": "Search query (literal text)",
         },
         "limit": {
             "type": "integer",
@@ -122,6 +131,7 @@ class EmailManager:
         self._agent_dir = Path(agent_dir)
         self._mailbox_dir = self._agent_dir / "mailbox"
         self._agent_name = agent_name
+        self._mail_auth_secret = os.environ.get(MAIL_AUTH_SECRET_ENV, "")
         # Track read state in memory (set of email IDs)
         self._read_ids: set[str] = set()
         self._load_read_state()
@@ -199,6 +209,36 @@ class EmailManager:
         except (json.JSONDecodeError, OSError):
             return None
 
+    def _sign_email(self, email: dict) -> None:
+        """Attach an HMAC signature when mail authentication is configured."""
+        if not self._mail_auth_secret:
+            return
+        email["signature_version"] = MAIL_SIGNATURE_VERSION
+        email["signature"] = self._email_signature(email)
+
+    def _email_signature(self, email: dict) -> str:
+        payload = {
+            field: email.get(field)
+            for field in _SIGNED_EMAIL_FIELDS
+        }
+        canonical = json.dumps(
+            payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+        )
+        digest = hmac.new(
+            self._mail_auth_secret.encode("utf-8"),
+            canonical.encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+        return f"{MAIL_SIGNATURE_VERSION}:{digest}"
+
+    def _is_authenticated_email(self, email: dict) -> bool:
+        if not self._mail_auth_secret:
+            return True
+        signature = email.get("signature", "")
+        if not isinstance(signature, str):
+            return False
+        return hmac.compare_digest(signature, self._email_signature(email))
+
     def _list_emails(self, folder: str) -> list[dict]:
         """Load all emails from a folder, sorted by date (newest first)."""
         folder_path = self._folder_dir(folder)
@@ -208,7 +248,7 @@ class EmailManager:
         for f in folder_path.iterdir():
             if f.suffix == ".json" and not f.name.startswith("."):
                 email = self._read_email_file(f)
-                if email:
+                if email and self._is_authenticated_email(email):
                     emails.append(email)
         emails.sort(key=lambda e: e.get("date", ""), reverse=True)
         return emails
@@ -325,6 +365,7 @@ class EmailManager:
             "thread_id": args.get("thread_id") or email_id,
             "status": "sent",
         }
+        self._sign_email(email)
 
         # Write to sent/
         self._write_email("sent", email)
@@ -353,6 +394,7 @@ class EmailManager:
         try:
             delivered = dict(email)
             delivered["status"] = "delivered"
+            self._sign_email(delivered)
             fd, tmp = tempfile.mkstemp(dir=str(recipient_inbox), suffix=".tmp")
             os.write(fd, json.dumps(delivered, indent=2, ensure_ascii=False).encode())
             os.fsync(fd)
@@ -405,6 +447,8 @@ class EmailManager:
         email = self._read_email_file(path)
         if email is None:
             return {"error": f"Failed to read email: {email_id}"}
+        if not self._is_authenticated_email(email):
+            return {"error": f"Email authentication failed: {email_id}"}
 
         # Mark as read
         self._mark_read(email_id)
@@ -427,6 +471,8 @@ class EmailManager:
         original = self._read_email_file(path)
         if original is None:
             return {"error": f"Failed to read original email: {email_id}"}
+        if not self._is_authenticated_email(original):
+            return {"error": f"Email authentication failed: {email_id}"}
 
         # Reply goes to the sender of the original
         reply_to = original.get("from", "")
@@ -446,24 +492,22 @@ class EmailManager:
         query = args.get("query", "")
         if not query:
             return {"error": "query is required"}
+        if len(query) > MAX_SEARCH_PATTERN_LENGTH:
+            return {"error": "query is too long"}
         folder = args.get("folder", "inbox")
         limit = args.get("limit", 20)
 
-        try:
-            pattern = re.compile(query, re.IGNORECASE)
-        except re.error as e:
-            return {"error": f"Invalid regex: {e}"}
-
         emails = self._list_emails(folder)
         matches = []
+        needle = query.casefold()
         for email in emails:
             searchable = " ".join([
                 email.get("from", ""),
                 email.get("to", ""),
                 email.get("subject", ""),
                 email.get("body", ""),
-            ])
-            if pattern.search(searchable):
+            ]).casefold()
+            if needle in searchable:
                 matches.append({
                     "id": email.get("id"),
                     "from": email.get("from"),
@@ -492,6 +536,8 @@ class EmailManager:
         email = self._read_email_file(path)
         if email is None:
             return {"error": f"Failed to read email: {email_id}"}
+        if not self._is_authenticated_email(email):
+            return {"error": f"Email authentication failed: {email_id}"}
 
         # Write to archive, delete from original folder
         self._write_email("archive", email)
