@@ -63,7 +63,16 @@ class ClaudeCodeSessionManager(SessionManager):
         if self._initialized:
             cmd.append("--continue")
 
-        log.info("Running: %s", " ".join(cmd))
+        redacted_cmd = [
+            "claude",
+            "-p", "<redacted prompt>",
+            "--dangerously-skip-permissions",
+            "--model", self._model,
+            "--effort", self._effort,
+        ]
+        if self._initialized:
+            redacted_cmd.append("--continue")
+        log.info("Running: %s", " ".join(redacted_cmd))
 
         try:
             result = subprocess.run(
