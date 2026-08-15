@@ -57,6 +57,7 @@ from .library_manager import DESCRIPTION as LIBRARY_DESCRIPTION
 from .mapping import MappingManager
 from .mapping import SCHEMA as MAPPING_SCHEMA
 from .mapping import DESCRIPTION as MAPPING_DESCRIPTION
+from .security import safe_child
 from .system_manager import SystemManager
 from .system_manager import SCHEMA as SYSTEM_SCHEMA
 from .system_manager import DESCRIPTION as SYSTEM_DESCRIPTION
@@ -328,8 +329,22 @@ def build_server(
                 if not node_dir:
                     result = _error("node_dir required for validate")
                 else:
-                    result = validate_node(Path(node_dir), runtime=runtime)
-                    result["status"] = "ok"
+                    if agent_dir is None:
+                        result = _error("agent_dir required for validate")
+                    else:
+                        candidate = Path(node_dir)
+                        if candidate.is_absolute():
+                            candidate = candidate.resolve(strict=False)
+                            base = agent_dir.parent.resolve(strict=False)
+                            if candidate != base and base not in candidate.parents:
+                                raise ValueError(
+                                    f"path escapes base directory: {node_dir}"
+                                )
+                            validated_dir = candidate
+                        else:
+                            validated_dir = safe_child(agent_dir.parent, node_dir)
+                        result = validate_node(validated_dir, runtime=runtime)
+                        result["status"] = "ok"
             else:
                 result = _error(f"Unknown contract action: {action}")
 

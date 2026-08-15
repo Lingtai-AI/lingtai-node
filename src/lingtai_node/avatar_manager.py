@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from lingtai_node.contracts import NODE_CONTRACT_VERSION
+from lingtai_node.security import safe_child
 
 log = logging.getLogger(__name__)
 
@@ -92,7 +93,7 @@ class AvatarManager:
 
         runtime = args.get("runtime", "claude-code")
 
-        node_dir = self._parent_dir / name
+        node_dir = safe_child(self._parent_dir, name)
         if node_dir.exists():
             return {"error": f"Node directory already exists: {node_dir}"}
 
@@ -188,7 +189,7 @@ class AvatarManager:
         if not name:
             return {"error": "name is required"}
 
-        target_dir = self._parent_dir / name
+        target_dir = safe_child(self._parent_dir, name)
         if not target_dir.is_dir():
             return {"error": f"Node directory not found: {name}"}
 

@@ -15,6 +15,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .security import safe_child
+
 log = logging.getLogger(__name__)
 
 SCHEMA = {
@@ -84,7 +86,7 @@ class SystemManager:
         target = args.get("target", "")
         if not target:
             return None
-        return self._parent_dir / target
+        return safe_child(self._parent_dir, target)
 
     def _write_signal(self, target_dir: Path, filename: str, data: dict) -> None:
         """Write a signal file atomically to a target directory."""
