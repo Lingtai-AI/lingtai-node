@@ -21,6 +21,8 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from .security import safe_child
+
 log = logging.getLogger(__name__)
 
 SCHEMA = {
@@ -344,7 +346,7 @@ class EmailManager:
         if not to:
             return
         # Check if recipient has a directory at ../to/ relative to agent_dir
-        recipient_dir = self._agent_dir.parent / to
+        recipient_dir = safe_child(self._agent_dir.parent, to)
         if not recipient_dir.is_dir():
             return
         recipient_inbox = recipient_dir / "mailbox" / "inbox"
