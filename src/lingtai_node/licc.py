@@ -64,7 +64,7 @@ def push_inbox_event(
     }
 
     try:
-        target_dir = Path(agent_dir) / INBOX_DIRNAME / mcp_name
+        target_dir = _resolve_target_dir(agent_dir, mcp_name)
         target_dir.mkdir(parents=True, exist_ok=True)
         event_id = f"{int(time.time() * 1000)}-{uuid.uuid4().hex[:8]}"
         tmp = target_dir / f"{event_id}{TMP_SUFFIX}"
@@ -81,3 +81,21 @@ def push_inbox_event(
     except OSError as e:
         log.error("LICC: failed to write event for %s: %s", mcp_name, e)
         return False
+
+
+def _resolve_target_dir(agent_dir: str, mcp_name: str) -> Path:
+    agent_path = Path(agent_dir).expanduser()
+    if not agent_path.is_absolute():
+        raise OSError("LINGTAI_AGENT_DIR must be absolute")
+
+    project_root_raw = os.environ.get("LINGTAI_PROJECT_DIR")
+    project_root = Path(project_root_raw).expanduser() if project_root_raw else Path.cwd()
+    project_root = project_root.resolve(strict=False)
+    agent_path = agent_path.resolve(strict=False)
+    if agent_path != project_root and project_root not in agent_path.parents:
+        raise OSError("LINGTAI_AGENT_DIR escapes project root")
+
+    if Path(mcp_name).name != mcp_name:
+        raise OSError("LINGTAI_MCP_NAME must be a single path segment")
+
+    return agent_path / INBOX_DIRNAME / mcp_name

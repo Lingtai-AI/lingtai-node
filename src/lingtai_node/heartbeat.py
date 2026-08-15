@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import tempfile
 import threading
 import time
@@ -39,7 +38,6 @@ class HeartbeatManager:
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "runtime": self._runtime,
             "status": "alive",
-            "pid": os.getpid(),
         }
 
     def beat(self) -> None:

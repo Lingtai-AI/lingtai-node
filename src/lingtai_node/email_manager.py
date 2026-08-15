@@ -23,6 +23,9 @@ from uuid import uuid4
 
 log = logging.getLogger(__name__)
 
+MAX_MAIL_BODY_BYTES = 64 * 1024
+MAX_MAIL_ATTACHMENTS_BYTES = 1024 * 1024
+
 SCHEMA = {
     "type": "object",
     "properties": {
@@ -58,6 +61,10 @@ SCHEMA = {
         "body": {
             "type": "string",
             "description": "Email body (for send, reply)",
+        },
+        "attachments": {
+            "type": "array",
+            "description": "Optional JSON attachments for send/reply",
         },
         "id": {
             "type": "string",
@@ -304,12 +311,16 @@ class EmailManager:
         to = args.get("to", "")
         subject = args.get("subject", "")
         body = args.get("body", "")
+        attachments = args.get("attachments", [])
         if not to:
             return {"error": "to is required"}
         if not subject:
             return {"error": "subject is required"}
         if not body:
             return {"error": "body is required"}
+        size_error = _validate_mail_size(body, attachments)
+        if size_error:
+            return {"error": size_error}
 
         now = datetime.now(timezone.utc).isoformat()
         email_id = uuid4().hex[:12]
@@ -320,6 +331,7 @@ class EmailManager:
             "to": to,
             "subject": subject,
             "body": body,
+            "attachments": attachments,
             "date": now,
             "in_reply_to": args.get("in_reply_to"),
             "thread_id": args.get("thread_id") or email_id,
@@ -414,10 +426,14 @@ class EmailManager:
     def _reply(self, args: dict) -> dict:
         email_id = args.get("id", "")
         body = args.get("body", "")
+        attachments = args.get("attachments", [])
         if not email_id:
             return {"error": "id is required"}
         if not body:
             return {"error": "body is required"}
+        size_error = _validate_mail_size(body, attachments)
+        if size_error:
+            return {"error": size_error}
 
         result = self._find_email(email_id)
         if result is None:
@@ -438,6 +454,7 @@ class EmailManager:
             "to": reply_to,
             "subject": subject,
             "body": body,
+            "attachments": attachments,
             "in_reply_to": email_id,
             "thread_id": original.get("thread_id", email_id),
         })
@@ -575,3 +592,20 @@ class EmailManager:
 
         self._save_contacts(contacts)
         return {"status": "updated", "name": name}
+
+
+def _validate_mail_size(body: str, attachments: Any) -> str | None:
+    body_bytes = len(body.encode("utf-8"))
+    if body_bytes > MAX_MAIL_BODY_BYTES:
+        return f"body exceeds {MAX_MAIL_BODY_BYTES} byte limit"
+
+    try:
+        attachment_bytes = len(
+            json.dumps(attachments, ensure_ascii=False).encode("utf-8")
+        )
+    except (TypeError, ValueError):
+        return "attachments must be JSON serializable"
+
+    if attachment_bytes > MAX_MAIL_ATTACHMENTS_BYTES:
+        return f"attachments exceed {MAX_MAIL_ATTACHMENTS_BYTES} byte limit"
+    return None

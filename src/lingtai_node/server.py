@@ -162,7 +162,7 @@ def _build_node_info(
     return {
         "status": "ok",
         "agent_name": agent_name,
-        "agent_dir": str(agent_dir),
+        "agent_dir": agent_dir.name,
         "runtime": runtime,
         "contract_version": NODE_CONTRACT_VERSION,
         "heartbeat": hb,
